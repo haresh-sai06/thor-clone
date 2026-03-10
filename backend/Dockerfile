@@ -30,4 +30,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:$PORT/health || exit 1
 
 # Start command
-CMD ["sh", "-c", "echo 'Starting THOR Backend...' && echo 'PORT: $PORT' && sleep 2 && python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level debug"]
+CMD ["sh", "-c", "cd /app && echo 'Starting THOR Backend...' && echo 'PORT: $PORT' && echo 'Working directory:' && pwd && echo 'Files in directory:' && ls -la && sleep 2 && python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level debug"]
