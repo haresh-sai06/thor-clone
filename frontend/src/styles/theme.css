@@ -7,13 +7,14 @@
 
   /* Deep Solid Backgrounds */
   --thor-bg: #000000;
-  /* Pure Black Background */
   --thor-surface: #0A0A0A;
-  /* Slightly elevated surface */
-  --thor-surface-2: #121212;
-  /* Elevated cards */
-  --thor-surface-3: #1A1A1A;
-  /* Highest elevation / hover states */
+  --thor-surface-2: #111111;
+  --thor-surface-3: #1C1C1E;
+
+  /* Glass tokens */
+  --thor-glass: rgba(255,255,255,0.04);
+  --thor-glass-border: rgba(255,255,255,0.08);
+  --thor-glow: rgba(234,179,8,0.15);
 
   /* Solid Borders */
   --thor-border: #27272A;
@@ -35,6 +36,19 @@
   --thor-info: #3B82F6;
   --thor-info-muted: #1E3A8A;
 
+  /* Enterprise tokens */
+  --ent-bg: #030712;
+  --ent-surface: #0F172A;
+  --ent-surface-2: #1E293B;
+  --ent-surface-3: #334155;
+  --ent-accent: #EAB308;
+  --ent-accent-dim: rgba(234,179,8,0.12);
+  --ent-border: #1E293B;
+  --ent-border-bright: #334155;
+  --ent-text: #F8FAFC;
+  --ent-text-2: #94A3B8;
+  --ent-text-3: #475569;
+
   /* Shadows */
   --thor-shadow-solid: 0 10px 30px -10px rgba(0, 0, 0, 1);
   --thor-shadow-glow: 0 0 15px rgba(234, 179, 8, 0.5);
@@ -54,39 +68,75 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Base resets & Scrollbars */
+/* ─── Scrollbars ─── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--thor-bg);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--thor-border);
-  border-radius: 10px;
+  background: #3F3F46;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--thor-border-hover);
+  background: #52525B;
 }
 
-/* Remove mesh background and keep it solid pure black - we keep empty classes so React doesn't break */
+/* ─── Ambient Background ─── */
 .ambient-bg {
-  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 .ambient-orb {
-  display: none;
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.04;
 }
 
-/* Keep class name but make it 100% Solid Premium */
+.ambient-orb-1,
+.ambient-orb:first-child {
+  width: 600px;
+  height: 600px;
+  background: #EAB308;
+  top: -200px;
+  right: -200px;
+}
+
+.ambient-orb-2,
+.ambient-orb:nth-child(2) {
+  width: 400px;
+  height: 400px;
+  background: #10B981;
+  bottom: -100px;
+  left: -100px;
+}
+
+.ambient-orb:nth-child(3) {
+  width: 300px;
+  height: 300px;
+  background: #3B82F6;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.02;
+}
+
+/* ─── Glass Panels ─── */
 .glass-panel {
-  background-color: var(--thor-surface);
-  border: 1px solid var(--thor-border);
-  box-shadow: var(--thor-shadow-solid);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .glass-card {
@@ -122,7 +172,7 @@ body {
   left: 150%;
 }
 
-/* Typography Enhancements */
+/* ─── Typography ─── */
 .text-display {
   font-size: 3.5rem;
   line-height: 1.1;
@@ -166,7 +216,6 @@ body {
 }
 
 .gradient-text {
-  /* Solid gradient without translucency */
   background: linear-gradient(135deg, #FFFFFF 0%, #A1A1AA 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -180,7 +229,7 @@ body {
   background-clip: text;
 }
 
-/* Premium Buttons - Solid Colors */
+/* ─── Buttons ─── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -222,7 +271,7 @@ body {
   border-color: var(--thor-text-secondary);
 }
 
-/* Solid Inputs */
+/* ─── Inputs ─── */
 .input {
   width: 100%;
   background-color: var(--thor-surface);
@@ -239,14 +288,14 @@ body {
   outline: none;
   background-color: var(--thor-surface-2);
   border-color: var(--thor-brand);
-  box-shadow: 0 0 0 2px var(--thor-brand), var(--thor-shadow-inset);
+  box-shadow: 0 0 0 3px rgba(234,179,8,0.15), var(--thor-shadow-inset);
 }
 
 .input::placeholder {
   color: var(--thor-text-muted);
 }
 
-/* Solid Badges */
+/* ─── Badges ─── */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -284,18 +333,16 @@ body {
   border-color: var(--thor-brand);
 }
 
-/* Animations - Keeping them for motion graphics but 100% solid feeling */
+/* ─── Animations ─── */
 @keyframes thor-pulse {
   0% {
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.8);
   }
-
   70% {
     transform: scale(1);
     box-shadow: 0 0 0 10px rgba(234, 179, 8, 0);
   }
-
   100% {
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(234, 179, 8, 0);
@@ -306,92 +353,96 @@ body {
   animation: thor-pulse 2s infinite cubic-bezier(0.66, 0, 0, 1);
 }
 
-/* ─── GLOBAL 100% SOLID OVERRIDES ─── */
-/* The user requested ZERO glass and 100% solid opacity */
-
-/* 1. Neutralize all Tailwind backdrop blur */
-.backdrop-blur-sm,
-.backdrop-blur-md,
-.backdrop-blur-lg,
-.backdrop-blur-xl,
-.backdrop-blur-2xl,
-.backdrop-blur-3xl,
-.backdrop-blur {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+/* THOR Bar Loader — equalizer animation */
+@keyframes thorBar {
+  0%, 100% { height: 4px; opacity: 0.4; }
+  50% { height: 24px; opacity: 1; }
 }
 
-/* 2. Force translucent Tailwind backgrounds to solid tokens */
-.bg-white\/5,
-.bg-white\/8,
-.bg-white\/10,
-.bg-white\/20,
-.bg-white\/80,
-.bg-white\/90,
-.bg-slate-900\/80,
-.bg-slate-900\/90,
-.bg-slate-900\/95,
-.bg-indigo-50\/50,
-.bg-indigo-400\/20,
-.bg-\[rgba\(255\,255\,255\,0\.05\)\] {
-  background-color: var(--thor-surface-2) !important;
+.thor-bar {
+  width: 4px;
+  border-radius: 9999px;
+  background: var(--thor-brand);
+  animation: thorBar 1.2s ease-in-out infinite;
 }
 
-/* Base surface mapping for nested cards */
-.glass-card .bg-white\/5,
-.glass-panel .bg-white\/5 {
-  background-color: var(--thor-surface-3) !important;
+.thor-bar:nth-child(2) { animation-delay: 0.15s; }
+.thor-bar:nth-child(3) { animation-delay: 0.3s; }
+
+/* Bottom Sheet Animation */
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
-/* 3. Force translucent Tailwind borders to solid borders */
-.border-white\/5,
-.border-white\/10,
-.border-white\/20 {
-  border-color: var(--thor-border) !important;
+.sheet-up {
+  animation: sheetUp 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.hover\:bg-white\/10:hover,
-.hover\:bg-white\/8:hover,
-.hover\:bg-white\/5:hover {
-  background-color: var(--thor-surface-3) !important;
+/* Skeleton Loader */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
-/* 4. Completely hide gradient ambient orbs from old pages */
-.bg-blue-500\/10,
-.bg-yellow-500\/5,
-.bg-yellow-500\/10,
-.bg-indigo-400\/10,
-.bg-violet-400\/20,
-.bg-blue-400\/10,
-.bg-red-500\/5,
-.bg-green-500\/5,
-.bg-gradient-to-br.from-blue-500.opacity-20,
-.bg-gradient-to-br.from-violet-500.opacity-20,
-.opacity-20,
-.opacity-15 {
-  display: none !important;
-  opacity: 0 !important;
+.skeleton {
+  background: linear-gradient(90deg, #18181B 25%, #27272A 50%, #18181B 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* SOS Pulse Ring */
+@keyframes sosPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.animate-sos-pulse {
+  animation: sosPulse 1.5s ease-out infinite;
+}
+
+/* Red pulse for emergency */
+@keyframes redPulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.animate-red-pulse {
+  animation: redPulse 2s infinite cubic-bezier(0.66, 0, 0, 1);
 }
 
 /* ─── LIGHT THEME OVERRIDES ─── */
 :root.light {
-  /* Warm greenish-yellowish-white palette */
   --thor-bg: #FCFDF7;
   --thor-surface: #F4F9ED;
   --thor-surface-2: #EBF4DF;
   --thor-surface-3: #D9F99D;
 
-  /* Subtle green tinted borders */
   --thor-border: #D4E0C5;
   --thor-border-hover: #A3E635;
   --thor-border-glow: #FBBF24;
 
-  /* Dark text for legibility */
   --thor-text: #09090B;
   --thor-text-secondary: #52525B;
   --thor-text-muted: #71717A;
 
-  /* Invert shadows to be subtle dark dropshadows rather than glowing */
   --thor-shadow-solid: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
   --thor-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
@@ -405,4 +456,8 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+:root.light .ambient-orb {
+  opacity: 0.06;
 }

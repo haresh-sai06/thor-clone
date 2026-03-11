@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
     Shield, AlertTriangle, MapPin, Layers, Search, Filter,
     Hospital, Building2, Landmark, Siren, X, ChevronRight, Phone,
-    Heart, ShoppingCart, Banknote, Flame, Coffee
+    Heart, ShoppingCart, Banknote, Flame, Coffee, LocateFixed, RefreshCw
 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, Circle, InfoWindow } from "@react-google-maps/api";
 
@@ -28,7 +28,6 @@ const CATEGORY_META: Record<string, { icon: any; color: string; label: string }>
     embassy: { icon: Landmark, color: "#8b5cf6", label: "Embassy" },
     verified_shelter: { icon: Shield, color: "#22c55e", label: "Shelter" },
     fire_station: { icon: Siren, color: "#f97316", label: "Fire Station" },
-    // Google Places categories
     pharmacy: { icon: Heart, color: "#8b5cf6", label: "Pharmacy" },
     grocery_or_supermarket: { icon: ShoppingCart, color: "#22c55e", label: "Grocery" },
     atm: { icon: Banknote, color: "#eab308", label: "ATM" },
@@ -52,47 +51,55 @@ export default function SafetyMap() {
         libraries: LIBS
     });
 
+    const fetchData = useCallback(async (lat: number, lng: number) => {
+        try {
+            const [z, h, p] = await Promise.all([
+                fetch(`${API_URL}/safety/zones?lat=${lat}&lng=${lng}&radius=50000`).then(r => r.json()),
+                fetch(`${API_URL}/safety/hazards?status=active&lat=${lat}&lng=${lng}&radius=50000`).then(r => r.json()),
+                fetch(`${API_URL}/safety/nearby-places?lat=${lat}&lng=${lng}`).then(r => r.json()),
+            ]);
+            setZones(z.zones || []);
+            setHazards(h.hazards || []);
+            setPlaces(p.places || []);
+        } catch (e) { console.error(e); }
+    }, []);
+
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(
             async (p) => {
                 const lat = p.coords.latitude;
                 const lng = p.coords.longitude;
                 setUserPos({ lat, lng });
-
-                try {
-                    const [z, h, p] = await Promise.all([
-                        fetch(`${API_URL}/safety/zones?lat=${lat}&lng=${lng}&radius=50000`).then(r => r.json()),
-                        fetch(`${API_URL}/safety/hazards?status=active&lat=${lat}&lng=${lng}&radius=50000`).then(r => r.json()),
-                        fetch(`${API_URL}/safety/nearby-places?lat=${lat}&lng=${lng}`).then(r => r.json()),
-                    ]);
-                    setZones(z.zones || []);
-                    setHazards(h.hazards || []);
-                    setPlaces(p.places || []);
-                } catch (e) { console.error(e); }
+                fetchData(lat, lng);
             },
             () => { alert("THOR requires GPS access to monitor live safety."); }
         );
-    }, []);
+    }, [fetchData]);
+
+    const recenter = () => {
+        if (mapRef.current) {
+            mapRef.current.panTo(userPos);
+            mapRef.current.setZoom(13);
+        }
+    };
 
     const filteredZones = activeFilter ? zones.filter(z => z.category.toLowerCase() === activeFilter.toLowerCase()) : zones;
     const filteredPlaces = activeFilter ? places.filter(p => p.category.toLowerCase() === activeFilter.toLowerCase()) : places;
 
     return (
         <div className="h-full flex flex-col relative w-full bg-black min-h-[calc(100vh-140px)]">
-            {/* Map */}
+            {/* Full-bleed Map */}
             <div className="flex-1 w-full relative min-h-[500px]">
                 {isLoaded ? (
                     <GoogleMap
                         mapContainerStyle={{ width: "100%", height: "100%", minHeight: "600px" }}
                         center={userPos} zoom={13}
                         onLoad={(m) => { mapRef.current = m; }}
-                        options={{ styles: darkMapStyle, zoomControl: true, mapTypeControl: false, streetViewControl: false, fullscreenControl: false }}
+                        options={{ styles: darkMapStyle, zoomControl: false, mapTypeControl: false, streetViewControl: false, fullscreenControl: false }}
                     >
-                        {/* User position */}
                         <Marker position={userPos}
                             icon={{ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#3b82f6", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 }} />
 
-                        {/* Safe zones */}
                         {filteredZones.map((z, i) => {
                             const meta = CATEGORY_META[z.category];
                             return (
@@ -102,7 +109,6 @@ export default function SafetyMap() {
                             );
                         })}
 
-                        {/* Real Google Places */}
                         {filteredPlaces.map((p, i) => {
                             const meta = CATEGORY_META[p.category];
                             return (
@@ -112,7 +118,6 @@ export default function SafetyMap() {
                             );
                         })}
 
-                        {/* Hazard zones */}
                         {hazards.map((h, i) => (
                             <Circle key={`h-${i}`} center={{ lat: h.latitude, lng: h.longitude }}
                                 radius={h.danger_radius_meters}
@@ -124,7 +129,6 @@ export default function SafetyMap() {
                                 }} />
                         ))}
 
-                        {/* InfoWindow */}
                         {selectedZone && (
                             <InfoWindow position={{ lat: selectedZone.latitude, lng: selectedZone.longitude }}
                                 onCloseClick={() => setSelectedZone(null)}>
@@ -160,49 +164,91 @@ export default function SafetyMap() {
                     <div className="w-full h-full flex items-center justify-center"><div className="skeleton w-12 h-12 rounded-full" /></div>
                 )}
 
-                {/* Filter bar overlay */}
-                <div className="absolute top-4 left-4 right-4 flex items-center gap-2 z-10">
-                    <div className="card px-3 py-2 flex items-center gap-2 flex-wrap" style={{ backdropFilter: "blur(12px)", background: "rgba(17,24,39,0.85)" }}>
-                        <Filter className="w-4 h-4" style={{ color: "var(--thor-text-muted)" }} />
+                {/* Floating Glass Filter Bar */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute top-4 left-4 right-4 flex items-center gap-2 z-10"
+                >
+                    <div className="flex items-center gap-2 flex-wrap px-3 py-2 rounded-2xl border border-white/10"
+                        style={{ backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", background: "rgba(0,0,0,0.7)" }}>
+                        <Filter className="w-4 h-4 text-zinc-500" />
                         <button onClick={() => setActiveFilter(null)}
-                            className={`badge ${!activeFilter ? "badge-brand" : ""}`}
-                            style={!activeFilter ? {} : { background: "var(--thor-surface-3)", color: "var(--thor-text-muted)" }}>
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${!activeFilter ? "bg-yellow-400 text-black" : "bg-zinc-800 text-zinc-500 hover:bg-zinc-700"
+                                }`}>
                             All
                         </button>
                         {Object.entries(CATEGORY_META).map(([key, meta]) => (
                             <button key={key} onClick={() => setActiveFilter(activeFilter === key ? null : key)}
-                                className={`badge ${activeFilter === key ? "badge-brand" : ""}`}
-                                style={activeFilter === key ? { background: meta.color, color: "#fff" } : { background: "var(--thor-surface-3)", color: "var(--thor-text-muted)" }}>
-                                {meta.label.toUpperCase()}
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                                style={activeFilter === key
+                                    ? { background: meta.color, color: "#fff" }
+                                    : { background: "rgba(39,39,42,0.8)", color: "#71717A" }
+                                }>
+                                {meta.label}
                             </button>
                         ))}
                     </div>
+                </motion.div>
+
+                {/* Right-edge FABs */}
+                <div className="absolute right-4 bottom-24 flex flex-col gap-2 z-10">
+                    <motion.button
+                        whileTap={{ scale: 0.92 }}
+                        onClick={recenter}
+                        className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10"
+                        style={{ backdropFilter: "blur(20px)", background: "rgba(0,0,0,0.7)" }}
+                    >
+                        <LocateFixed className="w-5 h-5 text-blue-400" />
+                    </motion.button>
+                    <motion.button
+                        whileTap={{ scale: 0.92 }}
+                        onClick={() => fetchData(userPos.lat, userPos.lng)}
+                        className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10"
+                        style={{ backdropFilter: "blur(20px)", background: "rgba(0,0,0,0.7)" }}
+                    >
+                        <RefreshCw className="w-5 h-5 text-zinc-400" />
+                    </motion.button>
                 </div>
 
-                {/* Legend */}
-                {showLegend && (
-                    <div className="absolute bottom-6 left-4 card p-4 z-10" style={{ backdropFilter: "blur(12px)", background: "rgba(17,24,39,0.9)", width: 200 }}>
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-caption font-semibold" style={{ color: "var(--thor-text)" }}>Legend</span>
-                            <button onClick={() => setShowLegend(false)} style={{ color: "var(--thor-text-muted)" }}><X className="w-3.5 h-3.5" /></button>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ background: "#3b82f6" }} /><span className="text-caption" style={{ color: "var(--thor-text-muted)" }}>Your location</span></div>
-                            {Object.entries(CATEGORY_META).map(([k, m]) => (
-                                <div key={k} className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ background: m.color }} /><span className="text-caption" style={{ color: "var(--thor-text-muted)" }}>{m.label}</span></div>
-                            ))}
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border" style={{ borderColor: "#ef4444", background: "rgba(239,68,68,0.2)" }} /><span className="text-caption" style={{ color: "var(--thor-text-muted)" }}>Danger zone</span></div>
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border" style={{ borderColor: "#eab308", background: "rgba(234,179,8,0.2)" }} /><span className="text-caption" style={{ color: "var(--thor-text-muted)" }}>Caution zone</span></div>
-                        </div>
-                    </div>
-                )}
+                {/* Legend — bottom left glass panel */}
+                <AnimatePresence>
+                    {showLegend && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            className="absolute bottom-6 left-4 rounded-2xl p-4 z-10 border border-white/10"
+                            style={{ backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", background: "rgba(0,0,0,0.7)", width: 180 }}
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs font-bold text-white">Legend</span>
+                                <button onClick={() => setShowLegend(false)} className="text-zinc-500 hover:text-zinc-300 transition-colors"><X className="w-3.5 h-3.5" /></button>
+                            </div>
+                            <div className="space-y-1.5">
+                                <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-blue-500" /><span className="text-[11px] text-zinc-400">Your location</span></div>
+                                {Object.entries(CATEGORY_META).map(([k, m]) => (
+                                    <div key={k} className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{ background: m.color }} /><span className="text-[11px] text-zinc-400">{m.label}</span></div>
+                                ))}
+                                <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full border" style={{ borderColor: "#ef4444", background: "rgba(239,68,68,0.2)" }} /><span className="text-[11px] text-zinc-400">Danger zone</span></div>
+                                <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full border" style={{ borderColor: "#eab308", background: "rgba(234,179,8,0.2)" }} /><span className="text-[11px] text-zinc-400">Caution zone</span></div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                {/* Zone count */}
-                <div className="absolute bottom-6 right-4 card px-4 py-2.5 z-10" style={{ backdropFilter: "blur(12px)", background: "rgba(17,24,39,0.9)" }}>
-                    <p className="text-caption" style={{ color: "var(--thor-text-muted)" }}>
-                        <span className="font-semibold" style={{ color: "var(--thor-safe)" }}>{filteredZones.length}</span> safe zones · <span className="font-semibold" style={{ color: "var(--thor-danger)" }}>{hazards.length}</span> hazards
+                {/* Status chip — bottom right */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="absolute bottom-6 right-4 rounded-xl px-4 py-2 z-10 border border-white/10"
+                    style={{ backdropFilter: "blur(20px)", background: "rgba(0,0,0,0.7)" }}
+                >
+                    <p className="text-xs text-zinc-400">
+                        <span className="font-semibold text-green-400">{filteredZones.length}</span> safe zones ·{" "}
+                        <span className="font-semibold text-red-400">{hazards.length}</span> hazards
                     </p>
-                </div>
+                </motion.div>
             </div>
         </div>
     );

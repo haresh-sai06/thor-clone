@@ -20,6 +20,7 @@ import VoiceAI from "./pages/tourist/VoiceAI";
 import Emergency from "./pages/tourist/Emergency";
 import Profile from "./pages/tourist/Profile";
 import SettingsPage from "./pages/Settings";
+import Landing from "./pages/Landing";
 
 // Enterprise pages
 import EnterpriseHome from './pages/enterprise/EnterpriseHome';
@@ -107,6 +108,6 @@ export const router = createBrowserRouter([
   },
 
   // Root redirect
-  { path: "/", element: <Navigate to="/login" replace /> },
+  { path: "/", element: <Landing /> },
   { path: "*", element: <ErrorPage /> },
 ]);
