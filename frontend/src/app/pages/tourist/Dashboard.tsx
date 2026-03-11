@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
-import { MapPin, Calendar, Plus, ChevronRight, Zap, Target } from "lucide-react";
+import { MapPin, Calendar, Plus, ChevronRight, Zap, Target, Users, Star, ExternalLink, Phone, Search } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/TranslationContext";
 import { Check, X, ShieldAlert } from "lucide-react";
@@ -15,6 +15,8 @@ export default function Dashboard() {
   const [activePlans, setActivePlans] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [guides, setGuides] = useState<any[]>([]);
+  const [loadingGuides, setLoadingGuides] = useState(false);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -31,7 +33,22 @@ export default function Dashboard() {
 
       const saved = localStorage.getItem("thor_active_plan");
       if (saved) {
-        setActivePlans([JSON.parse(saved)]);
+        const plan = JSON.parse(saved);
+        setActivePlans([plan]);
+
+        // Fetch local guides for the active plan's destination
+        if (plan.destination) {
+          setLoadingGuides(true);
+          fetch(`${API_URL}/trip/guides?destination=${encodeURIComponent(plan.destination)}`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("thor_token")}` }
+          })
+            .then(r => r.json())
+            .then(data => {
+              if (data.guides) setGuides(data.guides);
+              setLoadingGuides(false);
+            })
+            .catch(() => setLoadingGuides(false));
+        }
       }
 
       setLoading(false);
@@ -79,7 +96,7 @@ export default function Dashboard() {
           </div>
           <h2 className="text-3xl font-bold mb-2 tracking-tight" style={{ color: "var(--thor-text)" }}>{translate("Create a New Plan")}</h2>
           <p className="text-zinc-400 max-w-md text-sm leading-relaxed">
-            {translate("Enter your destination and dates. Our AI will instantly build a fully-routed, safety-first itinerary optimized for you.")}
+            {translate("Pick your destination, get AI suggestions for hotels, restaurants & spots, then build your custom route.")}
           </p>
         </div>
 
@@ -156,9 +173,14 @@ export default function Dashboard() {
                     {plan.destination}
                   </h4>
                   <div className="flex items-center gap-4 text-xs text-zinc-500 mt-2">
-                    <span className="flex items-center gap-1.5 whitespace-nowrap"><Calendar className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">{plan.duration} {translate("Days")}</span></span>
-                    <span className="flex items-center gap-1.5 whitespace-nowrap"><MapPin className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">{plan.stops?.length || 0} {translate("Stops")}</span></span>
+                    <span className="flex items-center gap-1.5 whitespace-nowrap"><Calendar className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">{plan.days?.length || 1} {translate("Days")}</span></span>
+                    <span className="flex items-center gap-1.5 whitespace-nowrap"><MapPin className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">
+                      {plan.days?.reduce((acc: number, d: any) => acc + (d.route_spots?.length || 0), 0) || 0} {translate("Spots")}
+                    </span></span>
                   </div>
+                  {plan.hotel_recommendation && (
+                    <p className="text-xs text-zinc-500 mt-1 truncate">🏨 {plan.hotel_recommendation.name}</p>
+                  )}
                 </div>
 
                 <div className="mt-5 pt-4 border-t border-zinc-800 flex items-center justify-between text-yellow-500 font-semibold text-sm group-hover:text-white transition-colors">
@@ -176,6 +198,103 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Local Guides for active plan destination */}
+      {activePlans.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold mb-4 tracking-tight flex items-center gap-2" style={{ color: "var(--thor-text)" }}>
+            <Users className="w-5 h-5 text-yellow-500" />
+            {translate("Local Guides")}
+            <span className="text-sm text-zinc-500 font-normal">— {activePlans[0].destination}</span>
+          </h3>
+
+          {loadingGuides ? (
+            <div className="flex gap-4 overflow-x-auto pb-4 noscrollbar">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="min-w-[280px] h-36 rounded-2xl animate-pulse border" 
+                     style={{ background: "var(--thor-surface-2)", borderColor: "var(--thor-border)" }} />
+              ))}
+            </div>
+          ) : guides.length > 0 ? (
+            <div className="flex gap-4 overflow-x-auto pb-4 noscrollbar">
+              {guides.map((g, i) => (
+                <div key={i} className="min-w-[280px] rounded-2xl p-4 flex flex-col justify-between border" 
+                     style={{ background: "var(--thor-surface-2)", borderColor: "var(--thor-border)" }}>
+                  <div>
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className="font-bold text-[15px] truncate max-w-[170px]" style={{ color: "var(--thor-text)" }}>{g.name}</h4>
+                      <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md shrink-0"
+                            style={{ color: "#eab308", background: "rgba(234, 179, 8, 0.1)" }}>
+                        <Star className="w-3 h-3" style={{ fill: "#eab308" }} /> {g.rating}
+                      </span>
+                    </div>
+                    <p className="text-xs mb-2 line-clamp-2" style={{ color: "var(--thor-text-muted)" }}>{g.role}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {g.languages?.map((l: string, idx: number) => (
+                        <span key={idx} className="text-[10px] px-2 py-0.5 rounded border" 
+                              style={{ 
+                                background: "var(--thor-surface-3)", 
+                                color: "var(--thor-text-muted)",
+                                borderColor: "var(--thor-border)"
+                              }}>{l}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 flex justify-between items-center" 
+                       style={{ borderTop: `1px solid var(--thor-border)` }}>
+                    <span className="text-[11px] font-semibold max-w-[100px] truncate" style={{ color: "#22c55e" }}>{g.price}</span>
+                    <div className="flex gap-2">
+                      <a href={`https://www.google.com/maps/place/?q=place_id:${g.id}`} target="_blank" rel="noreferrer"
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-bold transition-colors"
+                        style={{ 
+                          color: "#000", 
+                          background: "#fff", 
+                          border: "1px solid var(--thor-border)"
+                        }}>
+                        <MapPin className="w-3.5 h-3.5" /> Map
+                      </a>
+                      {g.website ? (
+                        <a href={g.website} target="_blank" rel="noreferrer"
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-bold transition-colors"
+                          style={{ 
+                            color: "#000", 
+                            background: "#fff", 
+                            border: "1px solid var(--thor-border)"
+                          }}>
+                          <ExternalLink className="w-3.5 h-3.5" /> Site
+                        </a>
+                      ) : (
+                        <a href={`https://www.google.com/search?q=${encodeURIComponent(g.name + ' tour guide ' + activePlans[0].destination)}`} target="_blank" rel="noreferrer"
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-bold transition-colors"
+                          style={{ 
+                            color: "#000", 
+                            background: "#fff", 
+                            border: "1px solid var(--thor-border)"
+                          }}>
+                          <Search className="w-3.5 h-3.5" /> Search
+                        </a>
+                      )}
+                      {g.phone && (
+                        <a href={`tel:${g.phone}`}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-bold transition-colors"
+                          style={{ 
+                            color: "#000", 
+                            background: "#fff", 
+                            border: "1px solid var(--thor-border)"
+                          }}>
+                          <Phone className="w-3.5 h-3.5" /> Call
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-zinc-500 text-sm italic">{translate("No local guides found for this destination yet.")}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
